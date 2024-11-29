@@ -9,7 +9,7 @@ const wss = new WebSocket.Server({ server });
 const players = {};
 const food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) };
 
-const colors = ['red', 'green', 'blue', 'orange', 'yellow', 'pink', 'purple', 'cyan', 'lime', 'teal'];
+const colors = ['green', 'blue', 'orange', 'yellow', 'pink', 'purple', 'cyan', 'lime', 'teal'];
 
 app.use(express.static('public'));
 
