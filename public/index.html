@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Snake</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background: #000;
+            display: block;
+            border: 1px solid #444;
+        }
+        #container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        #legend {
+            margin-left: 20px;
+            color: white;
+        }
+        #legend ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #legend li {
+            margin: 5px 0;
+        }
+        #rejoinContainer {
+            text-align: center;
+            display: none;
+        }
+        #rejoinButton {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div id="legend">
+            <h3>Player Scores</h3>
+            <ul id="scoreList"></ul>
+        </div>
+    </div>
+    <div id="rejoinContainer">
+        <button id="rejoinButton">Rejoin Game</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        const rejoinContainer = document.getElementById('rejoinContainer');
+        const rejoinButton = document.getElementById('rejoinButton');
+
+        let players = {};
+        let food = {};
+        let playerId = null;
+
+        const gridSize = 20;
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'init') {
+                players = data.players;
+                food = data.food;
+                playerId = data.id;
+            } else if (data.type === 'newPlayer') {
+                players[data.id] = data.position;
+            } else if (data.type === 'removePlayer') {
+                delete players[data.id];
+            } else if (data.type === 'playerDied') {
+                if (data.id === playerId) {
+                    rejoinContainer.style.display = 'block';
+                }
+                delete players[data.id];
+                updateLegend();
+            } else if (data.type === 'update') {
+                players = data.players;
+                food = data.food;
+                updateLegend();
+                drawGame();
+            }
+        };
+
+        rejoinButton.addEventListener('click', () => {
+            ws.send(JSON.stringify({ type: 'rejoin' }));
+            rejoinContainer.style.display = 'none';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') ws.send(JSON.stringify({ type: 'move', direction: 'up' }));
+            if (e.key === 'ArrowDown') ws.send(JSON.stringify({ type: 'move', direction: 'down' }));
+            if (e.key === 'ArrowLeft') ws.send(JSON.stringify({ type: 'move', direction: 'left' }));
+            if (e.key === 'ArrowRight') ws.send(JSON.stringify({ type: 'move', direction: 'right' }));
+        });
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw food
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+
+            // Draw players
+            for (const id in players) {
+                const player = players[id];
+                ctx.fillStyle = player.color || 'blue';
+
+                // Draw head
+                ctx.fillRect(player.x * gridSize, player.y * gridSize, gridSize, gridSize);
+
+                // Draw tail
+                player.tail.forEach(segment => {
+                    ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+                });
+            }
+        }
+
+        function updateLegend() {
+            const scoreList = document.getElementById('scoreList');
+            scoreList.innerHTML = '';
+
+            Object.keys(players).forEach((id) => {
+                const player = players[id];
+                const listItem = document.createElement('li');
+                listItem.textContent = `${id}: ${player.score || 0}`;
+                listItem.style.color = player.color || 'blue';
+                scoreList.appendChild(listItem);
+            });
+        }
+    </script>
+</body>
+</html>
