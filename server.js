@@ -41,9 +41,13 @@ wss.on('connection', (ws) => {
     const id = Math.random().toString(36).substr(2, 9);
     console.log(`Player connected: ${id}`);
 
+    // Randomize starting position
+    const startX = Math.floor(Math.random() * 20);
+    const startY = Math.floor(Math.random() * 20);
+
     players[id] = {
-        x: 10,
-        y: 10,
+        x: startX,
+        y: startY,
         dx: 1,
         dy: 0,
         tail: [],
@@ -66,17 +70,15 @@ wss.on('connection', (ws) => {
                 if (data.direction === 'right' && player.dx === 0) { player.dx = 1; player.dy = 0; }
             }
         } else if (data.type === 'rejoin') {
-            players[id] = {
-                x: 10,
-                y: 10,
-                dx: 1,
-                dy: 0,
-                tail: [],
-                score: 0,
-                color: getRandomColor(),
-                alive: true
-            };
-            broadcast({ type: 'newPlayer', id, position: players[id] });
+            const player = players[id];
+            if (player) {
+                player.dx = 1;
+                player.dy = 0;
+                player.tail = [];
+                player.score = 0;
+                player.alive = true;
+                broadcast({ type: 'newPlayer', id, position: player });
+            }
         }
     });
 
